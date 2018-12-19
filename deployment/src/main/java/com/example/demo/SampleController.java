@@ -25,8 +25,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 
 @RestController
 public class SampleController implements ServletContextAware{
-    
-   
 	private ServletContext context;
 	private int maxSize = 102400 * 1024;// 102400KB以内(100MB)
 
@@ -40,7 +38,6 @@ public class SampleController implements ServletContextAware{
     String home() {
         return "Hello This is the AI object detection service !";
     }
-    
     @RequestMapping(value="/",method=RequestMethod.POST)
     String multipartPostTest() {
         return "test multi part post";
@@ -64,7 +61,6 @@ public class SampleController implements ServletContextAware{
         if (!uploadPath.exists()) {
         	uploadPath.mkdirs();
         }
-        
         
         try  {
         	Part jsonPart=request.getPart("FileUpload");
