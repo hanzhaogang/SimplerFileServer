@@ -9,7 +9,7 @@ public class WebConfig implements WebMvcConfigurer{
 	@Override
 	public void addResourceHandlers(final ResourceHandlerRegistry registry) {
 	    registry.addResourceHandler("/**").
-	    		addResourceLocations("file:/home/share/matlab/MPSInstances/noHelmetPersonDetector/Step0_MyTestImages/");
+	    		addResourceLocations("file:/home/geiri/shandong_deploy/labeled/");
 	}
 }
 /*file path in Linux should be:/opt/x/y/z/static/*/
