@@ -38,10 +38,8 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 
 @RestController
 public class SampleController implements ServletContextAware{
-    public static String uploadPathStr = "/home/geiri/shandong_deploy/"+"uploads"+"/"; 
-    public static String labeledPathStr = "/home/geiri/shandong_deploy/"+"labeled"+"/";
-    // The name of the file to open.
-    public static String idFileName="id2Send.txt";
+    
+   
 	private ServletContext context;
 	private int maxSize = 102400 * 1024;// 102400KB以内(100MB)
 
@@ -71,15 +69,16 @@ public class SampleController implements ServletContextAware{
      */
     @RequestMapping(value="/edit/FileUpload",method= RequestMethod.POST)
     String fileUpload(HttpServletRequest request) {
+    	System.out.println("entering the fileUpload method.");
     	//MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
         //MultipartFile file = multipartRequest.getFile("file");
         
-        File uploadPath = new File(uploadPathStr);
+        File uploadPath = new File("/home/share/matlab/MPSInstances/noHelmetPersonDetector/Step0_MyTestImages/");
         if (!uploadPath.exists()) {
         	uploadPath.mkdirs();
         }
         
-        String idStr="";
+        
         try  {
         	Part jsonPart=request.getPart("FileUpload");
         	InputStream input2 = jsonPart.getInputStream();
@@ -93,10 +92,10 @@ public class SampleController implements ServletContextAware{
 			input2.close();
 			JsonNode rootNode = new ObjectMapper().readTree(new StringReader(jsonString));
 			JsonNode idFeild=rootNode.get("id");
-			idStr=idFeild.asText();
+			
             //jsonPart.getH
         	Part filePart=request.getPart("file");
-        	File file = new File(uploadPath, idStr+".jpg");
+        	File file = new File(uploadPath, "input.jpg");
         	InputStream input = filePart.getInputStream();
         	Files.copy(input, file.toPath());
         	System.out.println("upload file saved in the file system");
@@ -112,156 +111,8 @@ public class SampleController implements ServletContextAware{
         	public String message;
         }
         Response res=new Response();
-        res.id=idStr;
+        res.id="idStr";
         res.code=0;
-        res.message="";
-        return JsonUtil.toJson(res);
-    }
-    
-    /*
-     * return info of 10 labeled pictures
-     */
-    @RequestMapping(value="/edit/services/rest/edit/Images/Results",method=RequestMethod.GET)
-    @ResponseBody
-    String analysisResult(HttpServletRequest request) {
-    	//
-    	class Results{
-    		public int code;
-    		public String message;
-    		public boolean hasMore;
-    		public List<Photo> photos;
-    	} 	
-
-    	Results res=new Results();
-    	res.code=0;
-    	res.message="";
-    	
-    	//determine the hasMore attribute
-        File uploadPath = new File(uploadPathStr);
-        if (!uploadPath.exists()) {
-        	uploadPath.mkdirs();
-        }	
-		Path file = Paths.get(labeledPathStr+"id2Send.txt");
-    	try (Stream<String> lines = Files.lines(file, Charset.defaultCharset())) {
-    	    long numOfLines = lines.count();
-    	    if(10<numOfLines)
-    	    	res.hasMore=true;
-        } catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	
-    	//get the first 10 id of the pictures
-        int counter = 0;
-        String line = null;
-        FileReader fileReader = null;
-        List<String> idList=new ArrayList<String>(); 
-        BufferedReader bufferedReader;
-        try {
-            // FileReader reads text files in the default encoding.
-            fileReader = new FileReader(labeledPathStr+idFileName);
-            // Always wrap FileReader in BufferedReader.
-            bufferedReader = new BufferedReader(fileReader);
-
-            while((line = bufferedReader.readLine()) != null) {
-                counter++;
-                System.out.println("getting a id from the id2Send.txt file");
-                idList.add(line.trim());
-                if(counter == 10) {
-                	break;
-                }
-            }   
-            if(fileReader != null)
-            	bufferedReader.close();  
-        } catch(FileNotFoundException ex) {
-            System.out.println( "Unable to open file '" + idFileName + "'");                
-        } catch(IOException ex) {
-            System.out.println( "Error reading file '" + idFileName + "'");                  
-        }
-        
-        //now we construct the 10 photo objects from the idList
-        List<Photo> photos=new ArrayList<Photo>();
-        for(String id:idList) {
-        	Photo photo=new Photo();
-        	photo.id=id;
-        	photo.ip="";
-            photo.name=id;
-            photo.port=0;
-            photo.results=new ArrayList<Target>();
-            photo.stamp=0;
-            photo.timestamp=0;
-	        String fileurl = "http://192.168.10.170/"+id+".jpg";
-            photo.url=fileurl;
-            photos.add(photo);
-        }
-        res.photos=photos;
-        
-        return JsonUtil.toJson(res);
-    }
-    
-    @RequestMapping(value="/edit/services/rest/edit/Images/Results",method=RequestMethod.PUT)
-    String res4AnalysisResult(HttpServletRequest req, PhotoIds PhotosRecvArgu) {
-    	//get the id that the client has put to the request.
-        List<String> idsToRemove = new ArrayList<String>();
-    	try {
-			String jsonStr = req.getReader().lines().collect(Collectors.joining(
-					System.lineSeparator()));
-			//System.out.println(jsonStr);
-			JsonNode rootNode = new ObjectMapper().readTree(new StringReader(jsonStr));
-			JsonNode photosIds=rootNode.get("PhotosRecvArgu");
-			JsonNode array=photosIds.get("photoIds");
-			System.out.println(array.getNodeType());
-			Iterator<JsonNode> arrayEle=array.iterator();
-			while(arrayEle.hasNext()) {
-				JsonNode id=arrayEle.next();
-				String idStr=id.asText();
-				idsToRemove.add(idStr);
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	
-    	
-    	//delete these id from the id.txt file
-        File inputFile = new File(labeledPathStr+"id2Send.txt");
-        File tempFile = new File(labeledPathStr+"myTempFile.txt");
-        BufferedReader reader;
-        BufferedWriter writer;
-        boolean successful=false;
-		try {
-			reader = new BufferedReader(new FileReader(inputFile));
-			writer = new BufferedWriter(new FileWriter(tempFile));
-	        String currentLine;
-	        while((currentLine = reader.readLine()) != null) {
-	            // trim newline when comparing with lineToRemove
-	            String trimmedLine = currentLine.trim();
-	            if(idsToRemove.contains(trimmedLine)) 
-	            	continue;
-	            writer.write(currentLine + System.getProperty("line.separator"));
-	        }
-	        writer.close(); 
-	        reader.close(); 
-	        inputFile.delete();
-	        successful = tempFile.renameTo(inputFile);  
-	        if(successful)
-	        	System.out.println("id2Sent.txt file updated, pictures client has received have been removed from the id2Send.txt");
-	        else
-	        	System.out.println("id2Sent.txt file updated failed!");
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-
-		
-        //return json response
-        class Response{
-        	public int code;
-        	public String message;
-        }
-        Response res=new Response();
-        if(!successful)
-         res.code=1;
         res.message="";
         return JsonUtil.toJson(res);
     }
